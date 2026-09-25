@@ -1,0 +1,40 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "sales-forecast"
+version = "0.1.0"
+description = "Oefenproject: een kleine verkoopvoorspelling (ingest → transform → model)."
+readme = "README.md"
+requires-python = ">=3.12"
+# tzdata levert de tijdzonedatabase op systemen zonder /usr/share/zoneinfo (Windows).
+dependencies = ["tzdata>=2024.1"]
+
+[project.optional-dependencies]
+# ruff vastgepind op een minor-versie: nieuwe versies wijzigen de formatting en dan
+# faalt `make lint` ineens bij deelnemers.
+dev = ["pytest>=8", "ruff>=0.16,<0.17", "pyyaml>=6"]
+
+[project.scripts]
+sales-forecast = "sales_forecast.pipeline:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/sales_forecast"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+# Alleen Python. Anders formatteert ruff ook codeblokken in Markdown, en faalt de CI
+# zodra een deelnemer een Python-voorbeeld in zijn agent-bestand zet.
+include = ["*.py", "pyproject.toml"]
+# Oefenmateriaal is bewust slecht; de linter mag het niet "voorzeggen".
+extend-exclude = ["src/sales_forecast/practice"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP"]

@@ -1,0 +1,8 @@
+{
+  // Zorg dat Copilot alle instructielagen uit deze repo gebruikt.
+  "chat.useAgentsMdFile": true,
+  "github.copilot.chat.codeGeneration.useInstructionFiles": true,
+  "chat.useAgentSkills": true,
+  "python.testing.pytestEnabled": true,
+  "python.testing.pytestArgs": ["tests"]
+}

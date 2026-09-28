@@ -73,6 +73,7 @@ mogelijk, dan kost het alleen context als het nodig is.
      de extensies en `make install` worden automatisch ingericht.
    - **Lokaal in VS Code:** clone je fork, zorg voor Python 3.12 en draai `make install`.
      Geen `make` (standaard op Windows)? Gebruik de commando's uit de tabel hieronder.
+     Loopt er iets vast of gebruik je `uv`? Zie [Debug](#debug).
 4. **Controleer** dat alles werkt:
    ```bash
    make test          # alle tests groen
@@ -102,3 +103,111 @@ Voorspelling draaien: `python -m sales_forecast data/sample_sales.csv --period w
 
 De workflow [`tests.yml`](.github/workflows/tests.yml) draait lint, tests en
 `check-agents` bij elke pull request.
+
+## Debug
+
+Problemen die deelnemers bij een lokale installatie tegenkwamen, met de oplossing.
+
+### `make` niet gevonden
+
+| Systeem       | Installeren                                                        |
+| ------------- | ------------------------------------------------------------------ |
+| Windows       | `winget install ezwinports.make` en open daarna een nieuwe terminal |
+| macOS         | `xcode-select --install` (Command Line Tools, bevat `make`)        |
+| Linux (Debian/Ubuntu) | `sudo apt install make`                                    |
+
+Wil je geen `make` installeren? Gebruik dan de commando's uit de tabel bij
+[Commando's](#commandos).
+
+### Python 3.12 met een gewone venv (pip)
+
+Heb je zelf Python 3.12 geïnstalleerd, dan werkt alles zoals beschreven:
+
+```bash
+python -m venv .venv
+.venv\Scripts\activate        # Windows (PowerShell)
+source .venv/bin/activate     # macOS / Linux
+make install
+make test
+make check-agents
+```
+
+Controleer met `python --version` dat je echt 3.12 (of hoger) gebruikt.
+
+### Python 3.12 met `uv`
+
+[`uv`](https://docs.astral.sh/uv/) kan Python 3.12 zelf voor je installeren, maar let op:
+**een venv van `uv` bevat standaard geen `pip`**. `make install` draait
+`python -m pip install ...` en faalt dan met `No module named pip`. Kies één van twee routes.
+
+Route A: laat `uv` pip in de venv zetten, dan werkt de Makefile ongewijzigd:
+
+```bash
+uv python install 3.12
+uv venv --python 3.12 --seed   # --seed installeert pip in de venv
+.venv\Scripts\activate          # Windows; macOS/Linux: source .venv/bin/activate
+make install
+make test
+make check-agents
+```
+
+Route B: installeer met `uv` zelf en sla `make install` over:
+
+```bash
+uv python install 3.12
+uv venv --python 3.12
+.venv\Scripts\activate          # Windows; macOS/Linux: source .venv/bin/activate
+uv pip install -e ".[dev]"
+make test
+make check-agents
+```
+
+Wil je de venv niet activeren? Geef dan de Python van de venv mee aan `make`:
+`make test PYTHON=.venv/Scripts/python.exe` (Windows) of
+`make test PYTHON=.venv/bin/python` (macOS/Linux).
+
+### `uv`: `failed to hardlink file` (os error 396)
+
+`uv` koppelt bestanden standaard via hardlinks vanuit zijn cache. In een map die door
+OneDrive wordt gesynchroniseerd (vaak `Downloads`, `Documenten` of `Bureaublad` op Windows)
+mag dat niet. Laat `uv` de bestanden kopiëren:
+
+```powershell
+$env:UV_LINK_MODE = 'copy'   # alleen deze terminal
+setx UV_LINK_MODE copy       # permanent; open daarna een nieuwe terminal
+```
+
+Of clone de repo naar een map buiten OneDrive, bijvoorbeeld `C:\dev\`.
+
+### `python` opent de Microsoft Store of doet niets (Windows)
+
+Zonder actieve venv wijst `python` op Windows vaak naar een placeholder in
+`...\WindowsApps\python.exe`. Controleer het met `Get-Command python` (PowerShell).
+Activeer je venv, of zet de aliassen uit via *Instellingen* → *Apps* →
+*Geavanceerde app-instellingen* → *App-uitvoeringsaliassen* (`python.exe` en `python3.exe`).
+
+### Activeren van de venv wordt geblokkeerd (PowerShell)
+
+Krijg je `running scripts is disabled on this system`? Sta lokale scripts toe voor je eigen
+gebruiker:
+
+```powershell
+Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
+```
+
+### `ModuleNotFoundError: No module named 'pytest'` (of `ruff`, `yaml`)
+
+De dev-afhankelijkheden zitten niet in de Python die je gebruikt. Meestal is de venv niet
+geactiveerd, of is de installatie zonder `[dev]` gedaan. Activeer de venv en draai opnieuw
+`make install` (of `uv pip install -e ".[dev]"`).
+
+### VS Code gebruikt de verkeerde Python
+
+Kies de interpreter van de venv: `Ctrl+Shift+P` → *Python: Select Interpreter* →
+`.venv`. Open daarna een nieuwe terminal in VS Code, zodat die de venv automatisch activeert.
+
+### `make lint` faalt lokaal maar niet in de CI (of andersom)
+
+`ruff` is vastgepind op `>=0.16,<0.17`, omdat nieuwe versies de formatting veranderen.
+Een globaal geïnstalleerde `ruff` kan een andere versie zijn. Gebruik de `ruff` uit de
+venv (`python -m ruff --version`) en draai `make format` om automatisch te herstellen.
